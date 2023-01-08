@@ -1,4 +1,4 @@
-package net.sourceforge.lame.lowlevel;
+package net.sourceforge.lame;
 
 import java.io.*;
 

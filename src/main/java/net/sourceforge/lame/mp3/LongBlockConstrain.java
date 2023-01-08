@@ -23,7 +23,8 @@ final class LongBlockConstrain implements VBRQuantize.alloc_sf_f {
    * ****************************************************************
    */
 
-  public void alloc(algo_t that, int[] vbrsf, int[] vbrsfmin, int vbrmax) {
+  @Override
+public void alloc(algo_t that, int[] vbrsf, int[] vbrsfmin, int vbrmax) {
     final GrInfo cod_info = that.cod_info;
     final LameInternalFlags gfc = that.gfc;
     int[] max_rangep;

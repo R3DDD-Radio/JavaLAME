@@ -1,6 +1,8 @@
-package net.sourceforge.lame.lowlevel;
+package net.sourceforge.lame;
 
 import org.junit.jupiter.api.Test;
+
+import net.sourceforge.lame.LameDecoder;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;

@@ -1,6 +1,6 @@
 package net.sourceforge.lame.mp3;
 
-public final class VBRNewIterationLoop implements IIterationLoop {
+public final class VBRNewIterationLoop implements IterationLoop {
 
   /**
    *
@@ -14,7 +14,8 @@ public final class VBRNewIterationLoop implements IIterationLoop {
     this.quantize = quantize;
   }
 
-  public final void iteration_loop(final LameGlobalFlags gfp,
+  @Override
+public final void iterationLoop(final LameGlobalFlags gfp,
                                    final float[][] pe, final float[] ms_ener_ratio,
                                    final III_psy_ratio[][] ratio) {
     LameInternalFlags gfc = gfp.internal_flags;

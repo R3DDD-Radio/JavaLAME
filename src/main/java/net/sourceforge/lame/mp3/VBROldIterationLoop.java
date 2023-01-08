@@ -9,7 +9,7 @@ package net.sourceforge.lame.mp3;
  *
  * @author Ken
  */
-public final class VBROldIterationLoop implements IIterationLoop {
+public final class VBROldIterationLoop implements IterationLoop {
 
   /**
    *
@@ -23,7 +23,8 @@ public final class VBROldIterationLoop implements IIterationLoop {
     this.quantize = quantize;
   }
 
-  public void iteration_loop(LameGlobalFlags gfp, float[][] pe,
+  @Override
+public void iterationLoop(LameGlobalFlags gfp, float[][] pe,
                              float[] ms_ener_ratio, III_psy_ratio[][] ratio) {
     final LameInternalFlags gfc = gfp.internal_flags;
     float l3_xmin[][][] = new float[2][2][L3Side.SFBMAX];

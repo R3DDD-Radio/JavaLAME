@@ -7,10 +7,8 @@ package net.sourceforge.lame.mp3;
  *
  * @author Ken
  */
-public final class CBRNewIterationLoop implements IIterationLoop {
-  /**
-   *
-   */
+public final class CBRNewIterationLoop implements IterationLoop {
+	
   private final Quantize quantize;
 
   /**
@@ -20,7 +18,8 @@ public final class CBRNewIterationLoop implements IIterationLoop {
     this.quantize = quantize;
   }
 
-  public void iteration_loop(final LameGlobalFlags gfp, final float pe[][],
+  @Override
+public void iterationLoop(final LameGlobalFlags gfp, final float pe[][],
                              final float ms_ener_ratio[], final III_psy_ratio ratio[][]) {
     final LameInternalFlags gfc = gfp.internal_flags;
     float l3_xmin[] = new float[L3Side.SFBMAX];

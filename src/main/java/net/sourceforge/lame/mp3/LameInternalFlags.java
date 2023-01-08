@@ -279,7 +279,7 @@ public class LameInternalFlags {
   public int in_buffer_nsamples;
   public float[] in_buffer_0;
   public float[] in_buffer_1;
-  public IIterationLoop iteration_loop;
+  public IterationLoop iteration_loop;
   public LameInternalFlags() {
     for (int i = 0; i < en.length; i++) {
       en[i] = new III_psy_xmin();

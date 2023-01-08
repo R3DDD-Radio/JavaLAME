@@ -605,7 +605,7 @@ public class Encoder {
         }
       }
     }
-    gfc.iteration_loop.iteration_loop(gfp, pe_use, ms_ener_ratio, masking);
+    gfc.iteration_loop.iterationLoop(gfp, pe_use, ms_ener_ratio, masking);
 
     /****************************************
      * Stage 5: bitstream formatting *
