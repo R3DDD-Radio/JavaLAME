@@ -86,7 +86,7 @@ public class Lame {
   private ID3Tag id3;
   private MPGLib mpglib;
   private Encoder enc;
-  private GetAudio gaud;
+  private Audio gaud;
   private Reservoir rv;
   private Takehiro tak;
   private Parse parse;
@@ -98,7 +98,7 @@ public class Lame {
   private Version version = new Version();
   public Lame() {
     gfp = new LameGlobalFlags();
-    gaud = new GetAudio();
+    gaud = new Audio();
     ga = new GainAnalysis();
     bs = new BitStream();
     p = new Presets();
@@ -143,7 +143,7 @@ public class Lame {
     return parse;
   }
 
-  public GetAudio getAudio() {
+  public Audio getAudio() {
     return gaud;
   }
 

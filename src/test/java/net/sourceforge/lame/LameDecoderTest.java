@@ -10,7 +10,9 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -57,13 +59,13 @@ public class LameDecoderTest extends AbstractLameTest {
    * The actual decoding method to be used in your own project.
    */
   private byte[] decodeFromMp3(File mp3File) throws IOException {
-    LameDecoder decoder = new LameDecoder(mp3File.getAbsolutePath());
+    LameDecoder decoder = new LameDecoder(new DataInputStream(new FileInputStream(mp3File)));
 
-    ByteBuffer buffer = ByteBuffer.allocate(decoder.getBufferSize());
+    byte[] buffer = new byte[decoder.getBufferSize()];
     ByteArrayOutputStream pcm = new ByteArrayOutputStream();
 
     while (decoder.decode(buffer)) {
-      pcm.write(buffer.array());
+      pcm.write(buffer);
     }
 
     return asWav(pcm.toByteArray(), decoder.getSampleRate(), decoder.getChannels());
