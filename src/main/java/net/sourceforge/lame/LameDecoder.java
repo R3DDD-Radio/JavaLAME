@@ -10,17 +10,17 @@ public class LameDecoder {
 	
 	private final float[][] decodeBuffer = new float[2][1152];
 	
-	public LameDecoder(DataInputStream dataInputStream) {
+	public LameDecoder(String filename, DataInputStream dataInputStream) {
 		lame = new Lame();
 		lame.getFlags().setWriteId3tagAutomatic(false);
 		lame.initParams();
-		lame.getParser().setInputFormat(SoundFileFormat.WAVE);
+		lame.getParser().initializeInputFormat(filename);
 		lame.getAudio().initialize(lame.getFlags(), dataInputStream, new FrameSkip());
 	}
 	
 	public boolean decode(byte[] sampleBuffer) {
 		LameGlobalFlags flags = lame.getFlags();
-		int iread = lame.getAudio().get_audio16(flags, decodeBuffer);
+		int iread = lame.getAudio().getAudio16(flags, decodeBuffer);
 		if(iread >= 0) {
 			for(int i = 0; i < iread; i++) {
 				int sample = ((int) decodeBuffer[0][i] & 0xffff);

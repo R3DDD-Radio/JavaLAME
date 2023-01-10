@@ -101,6 +101,10 @@ public class Parse {
 		this.inputFormat = inputFormat;
 	}
 	
+	public void initializeInputFormat(String filename) {
+		this.setInputFormat(filenameToSoundFormat(filename));
+	}
+	
 	/**
 	 * Input: Get used by MP3.
 	 *
@@ -313,28 +317,26 @@ public class Parse {
 	 * the file type. Trying to analyze the file contents is well beyond the
 	 * scope of LAME and should not be added.
 	 */
-	private SoundFileFormat filename_to_type(String FileName) {
-		int len = FileName.length();
-		
-		if(len < 4)
+	private SoundFileFormat filenameToSoundFormat(String filename) {
+		int len = filename.length();
+		if(len < 4) {
 			return SoundFileFormat.UNKNOWN;
-		
-		FileName = FileName.substring(len - 4);
-		if(FileName.equalsIgnoreCase(".mpg"))
+		}
+		switch(filename.substring(len - 4).toLowerCase()) {
+		case ".mpg":
+		case ".mp1":
+		case ".mp2":
+		case ".mp3":
 			return SoundFileFormat.MP123;
-		if(FileName.equalsIgnoreCase(".mp1"))
-			return SoundFileFormat.MP123;
-		if(FileName.equalsIgnoreCase(".mp2"))
-			return SoundFileFormat.MP123;
-		if(FileName.equalsIgnoreCase(".mp3"))
-			return SoundFileFormat.MP123;
-		if(FileName.equalsIgnoreCase(".wav"))
+		case ".wav":
 			return SoundFileFormat.WAVE;
-		if(FileName.equalsIgnoreCase(".aif"))
+		case ".aif":
 			return SoundFileFormat.AIFF;
-		if(FileName.equalsIgnoreCase(".raw"))
+		case ".raw":
 			return SoundFileFormat.RAW;
-		return SoundFileFormat.UNKNOWN;
+		default:
+			return SoundFileFormat.UNKNOWN;
+		}
 	}
 	
 	private int resample_rate(double freq) {

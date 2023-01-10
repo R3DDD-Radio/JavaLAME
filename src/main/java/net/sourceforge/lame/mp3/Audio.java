@@ -97,6 +97,11 @@ public class Audio {
 	private DataInputStream inputStream;
 	private MPGLib.mpstr_tag hip;
 	
+	/* Buffers */
+	
+	private final int[] sampleBuffer = new int[2 * 1152];
+	private final float[][] bufferTemp16 = new float[2][1152];
+	
 	public void setModules(Parse parse2, MPGLib mpg2) {
 		parse = parse2;
 		mpg = mpg2;
@@ -125,16 +130,16 @@ public class Audio {
 	 * reads a frame of audio data from a file to the buffer, aligns the data
 	 * for future processing, and separates the left and right channels
 	 */
-	public final int get_audio(final LameGlobalFlags gfp, float buffer[][]) {
-		return get_audio_common(gfp, buffer, null);
+	public final int getAudio(LameGlobalFlags gfp, float[][] buffer) {
+		return getAudioCommon(gfp, buffer, null);
 	}
 	
 	/**
 	 * behave as the original get_audio function, with a limited 16 bit per
 	 * sample output
 	 */
-	public final int get_audio16(final LameGlobalFlags gfp, final float buffer[][]) {
-		return (get_audio_common(gfp, null, buffer));
+	public final int getAudio16(LameGlobalFlags gfp, float[][] buffer) {
+		return (getAudioCommon(gfp, null, buffer));
 	}
 	
 	/**
@@ -146,14 +151,13 @@ public class Audio {
 	 * @param buffer16 16-bit output (if buffer == NULL)
 	 * @return samples read
 	 */
-	private int get_audio_common(LameGlobalFlags gfp, float[][] buffer, float[][] buffer16) {
-		int num_channels = gfp.getInNumChannels();
-		int insamp[] = new int[2 * 1152];
-		float buf_tmp16[][] = new float[2][1152];
-		int samples_read;
+	private int getAudioCommon(LameGlobalFlags gfp, float[][] buffer, float[][] buffer16) {
+		int channels = gfp.getInNumChannels();
+		int samplesRead;
 		int framesize;
-		int samples_to_read;
-		int remaining, tmp_num_samples;
+		int samplesToRead;
+		int remaining; 
+		int tmp_num_samples;
 		
 		/*
 		 * NOTE: LAME can now handle arbritray size input data packets, so there
@@ -162,7 +166,7 @@ public class Audio {
 		 * read more than framesize worth of data.
 		 */
 		
-		samples_to_read = framesize = gfp.getFrameSize();
+		samplesToRead = framesize = gfp.getFrameSize();
 		assert (framesize <= 1152);
 		
 		/* get num_samples */
@@ -183,47 +187,49 @@ public class Audio {
 				 * would be 0, but we need to read some samples, so don't change
 				 * samples_to_read to the wrong value in this case
 				 */
-				samples_to_read = remaining;
+				samplesToRead = remaining;
 		}
 		
 		if(is_mpeg_file_format(parse.getInputFormat())) {
-			if(buffer != null)
-				samples_read = read_samples_mp3(gfp, inputStream, buf_tmp16);
-			else
-				samples_read = read_samples_mp3(gfp, inputStream, buffer16);
-			if(samples_read < 0) {
-				return samples_read;
+			if(buffer != null) {
+				samplesRead = read_samples_mp3(gfp, inputStream, bufferTemp16);
+			}
+			else {
+				samplesRead = read_samples_mp3(gfp, inputStream, buffer16);
+			}
+			if(samplesRead < 0) {
+				return samplesRead;
 			}
 		} else { /* convert from int; output to 16-bit buffer */
-			samples_read = read_samples_pcm(inputStream, insamp, num_channels * samples_to_read);
-			if(samples_read < 0) {
-				return samples_read;
+			samplesRead = read_samples_pcm(inputStream, sampleBuffer, channels * samplesToRead);
+			if(samplesRead < 0) {
+				return samplesRead;
 			}
-			int p = samples_read;
-			samples_read /= num_channels;
+			int p = samplesRead;
+			samplesRead /= channels;
 			if(buffer != null) { /* output to int buffer */
-				if(num_channels == 2) {
-					for(int i = samples_read; --i >= 0;) {
-						buffer[1][i] = insamp[--p];
-						buffer[0][i] = insamp[--p];
+				if(channels == 2) {
+					for(int i = samplesRead; --i >= 0;) {
+						buffer[1][i] = sampleBuffer[--p];
+						buffer[0][i] = sampleBuffer[--p];
 					}
-				} else if(num_channels == 1) {
-					Arrays.fill(buffer[1], 0, samples_read, 0);
-					for(int i = samples_read; --i >= 0;) {
-						buffer[0][i] = insamp[--p];
+				} else if(channels == 1) {
+					Arrays.fill(buffer[1], 0, samplesRead, 0);
+					for(int i = samplesRead; --i >= 0;) {
+						buffer[0][i] = sampleBuffer[--p];
 					}
 				} else
 					assert (false);
 			} else { /* convert from int; output to 16-bit buffer */
-				if(num_channels == 2) {
-					for(int i = samples_read; --i >= 0;) {
-						buffer16[1][i] = ((insamp[--p] >> 16) & 0xffff);
-						buffer16[0][i] = ((insamp[--p] >> 16) & 0xffff);
+				if(channels == 2) {
+					for(int i = samplesRead; --i >= 0;) {
+						buffer16[1][i] = ((sampleBuffer[--p] >> 16) & 0xffff);
+						buffer16[0][i] = ((sampleBuffer[--p] >> 16) & 0xffff);
 					}
-				} else if(num_channels == 1) {
-					Arrays.fill(buffer16[1], 0, samples_read, 0);
-					for(int i = samples_read; --i >= 0;) {
-						buffer16[0][i] = ((insamp[--p] >> 16) & 0xffff);
+				} else if(channels == 1) {
+					Arrays.fill(buffer16[1], 0, samplesRead, 0);
+					for(int i = samplesRead; --i >= 0;) {
+						buffer16[0][i] = ((sampleBuffer[--p] >> 16) & 0xffff);
 					}
 				} else
 					assert (false);
@@ -233,17 +239,17 @@ public class Audio {
 		/* LAME mp3 output 16bit - convert to int, if necessary */
 		if(is_mpeg_file_format(parse.getInputFormat())) {
 			if(buffer != null) {
-				for(int i = samples_read; --i >= 0;) {
-					int value = (int) (buf_tmp16[0][i]);
+				for(int i = samplesRead; --i >= 0;) {
+					int value = (int) (bufferTemp16[0][i]);
 					buffer[0][i] = value << 16;
 				}
-				if(num_channels == 2) {
-					for(int i = samples_read; --i >= 0;) {
-						int value = (int) (buf_tmp16[1][i]);
+				if(channels == 2) {
+					for(int i = samplesRead; --i >= 0;) {
+						int value = (int) (bufferTemp16[1][i]);
 						buffer[1][i] = value << 16;
 					}
-				} else if(num_channels == 1) {
-					Arrays.fill(buffer[1], 0, samples_read, 0);
+				} else if(channels == 1) {
+					Arrays.fill(buffer[1], 0, samplesRead, 0);
 				} else
 					assert (false);
 			}
@@ -254,9 +260,9 @@ public class Audio {
 		 * Don't count the samples
 		 */
 		if(tmp_num_samples != Integer.MAX_VALUE)
-			num_samples_read += samples_read;
+			num_samples_read += samplesRead;
 		
-		return samples_read;
+		return samplesRead;
 	}
 	
 	int read_samples_mp3(LameGlobalFlags gfp, DataInputStream musicin, float mpg123pcm[][]) {
@@ -327,7 +333,7 @@ public class Audio {
 	 * @param sample_buffer (must be allocated up to samples_to_read upon call)
 	 * @return number of samples read
 	 */
-	private int unpack_read_samples(int samples_to_read, int bytes_per_sample, boolean swap_order, int[] sample_buffer, DataInputStream inputStream) throws IOException {
+	private int unpack_read_samples(int samples_to_read, int bytes_per_sample, boolean swap_order, int[] sampleBuffer, DataInputStream inputStream) throws IOException {
 		byte[] bytes = new byte[bytes_per_sample * samples_to_read];
 		inputStream.readFully(bytes);
 		int samples_read = samples_to_read;
@@ -336,29 +342,29 @@ public class Audio {
 		if(!swap_order) {
 			if(bytes_per_sample == 1)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 24;
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 24;
 			if(bytes_per_sample == 2)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 16 | (bytes[i + 1] & 0xff) << 24;
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 16 | (bytes[i + 1] & 0xff) << 24;
 			if(bytes_per_sample == 3)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 8 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 24;
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 8 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 24;
 			if(bytes_per_sample == 4)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) | (bytes[i + 1] & 0xff) << 8 | (bytes[i + 2] & 0xff) << 16 | (bytes[i + 3] & 0xff) << 24;
+					sampleBuffer[--op] = (bytes[i] & 0xff) | (bytes[i + 1] & 0xff) << 8 | (bytes[i + 2] & 0xff) << 16 | (bytes[i + 3] & 0xff) << 24;
 		} else {
 			if(bytes_per_sample == 1)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = ((bytes[i] ^ 0x80) & 0xff) << 24 | 0x7f << 16; /* convert from unsigned */
+					sampleBuffer[--op] = ((bytes[i] ^ 0x80) & 0xff) << 24 | 0x7f << 16; /* convert from unsigned */
 			if(bytes_per_sample == 2)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16;
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16;
 			if(bytes_per_sample == 3)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 8;
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 8;
 			if(bytes_per_sample == 4)
 				for(int i = samples_read * bytes_per_sample; (i -= bytes_per_sample) >= 0;)
-					sample_buffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 8 | (bytes[i + 3] & 0xff);
+					sampleBuffer[--op] = (bytes[i] & 0xff) << 24 | (bytes[i + 1] & 0xff) << 16 | (bytes[i + 2] & 0xff) << 8 | (bytes[i + 3] & 0xff);
 		}
 		return (samples_read);
 	}
@@ -369,7 +375,7 @@ public class Audio {
 	 * SEMANTICS: Reads #samples_read# number of shorts from #musicin#
 	 * filepointer into #sample_buffer[]#. Returns the number of samples read.
 	 */
-	private int read_samples_pcm(DataInputStream inputStream, int[] sample_buffer, int samples_to_read) {
+	private int read_samples_pcm(DataInputStream inputStream, int[] sampleBuffer, int samples_to_read) {
 		int samples_read = 0;
 		boolean swap_byte_order;
 		/* byte order of input stream */
@@ -386,13 +392,13 @@ public class Audio {
 				if(pcmswapbytes) {
 					swap_byte_order = !swap_byte_order;
 				}
-				samples_read = unpack_read_samples(samples_to_read, pcmbitwidth / 8, swap_byte_order, sample_buffer, inputStream);
+				samples_read = unpack_read_samples(samples_to_read, pcmbitwidth / 8, swap_byte_order, sampleBuffer, inputStream);
 				
 			}
 				break;
 			
 			case 8: {
-				samples_read = unpack_read_samples(samples_to_read, 1, pcm_is_unsigned_8bit, sample_buffer, inputStream);
+				samples_read = unpack_read_samples(samples_to_read, 1, pcm_is_unsigned_8bit, sampleBuffer, inputStream);
 			}
 				break;
 			
@@ -1016,14 +1022,15 @@ public class Audio {
 	 * @return -1 error n number of samples output. either 576 or 1152 depending
 	 * on MP3 file.
 	 */
-	private int decodeFromStream(DataInputStream dataInputStream, float[] pcm_l, float[] pcm_r, MP3Data mp3data) {
+	private int decodeFromStream(DataInputStream dataInputStream, float[] pcmLeft, float[] pcmRight, MP3Data mp3data) {
+		
 		int ret = 0;
 		int len = 0;
 		byte buf[] = new byte[1024];
 		
 		/* first see if we still have data buffered in the decoder: */
 		ret = -1;
-		ret = mpg.hip_decode1_headers(hip, buf, len, pcm_l, pcm_r, mp3data, new FrameSkip());
+		ret = mpg.hip_decode1_headers(hip, buf, len, pcmLeft, pcmRight, mp3data, new FrameSkip());
 		if(ret != 0)
 			return ret;
 		
@@ -1037,7 +1044,7 @@ public class Audio {
 			}
 			if(len <= 0) {
 				/* we are done reading the file, but check for buffered data */
-				ret = mpg.hip_decode1_headers(hip, buf, 0, pcm_l, pcm_r, mp3data, new FrameSkip());
+				ret = mpg.hip_decode1_headers(hip, buf, 0, pcmLeft, pcmRight, mp3data, new FrameSkip());
 				if(ret <= 0) {
 					mpg.hip_decode_exit(hip);
 					/* release mp3decoder memory */
@@ -1047,7 +1054,7 @@ public class Audio {
 				break;
 			}
 			
-			ret = mpg.hip_decode1_headers(hip, buf, len, pcm_l, pcm_r, mp3data, new FrameSkip());
+			ret = mpg.hip_decode1_headers(hip, buf, len, pcmLeft, pcmRight, mp3data, new FrameSkip());
 			if(ret == -1) {
 				mpg.hip_decode_exit(hip);
 				/* release mp3decoder memory */
